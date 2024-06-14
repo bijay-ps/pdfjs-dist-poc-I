@@ -4,6 +4,7 @@ import 'pdfjs-dist/web/pdf_viewer.css';
 import * as pdfjsLib from 'pdfjs-dist';
 // Ensure the worker is loaded
 import './pdf-worker';
+import './PDFViewer.css';
 
 type Annotation = {
     x: number;
@@ -22,7 +23,11 @@ const PDFViewer: React.FC<{ fileUrl: string }> = ({ fileUrl }) => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [startX, setStartX] = useState(0);
     const [startY, setStartY] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
     const renderPageRef = useRef<(pageNum: number) => Promise<void>>(() => Promise.resolve());
+
+    const renderTaskRef = useRef<pdfjsLib.PDFRenderTask | null>(null);
 
     useEffect(() => {
         const loadDocument = async () => {
@@ -30,6 +35,7 @@ const PDFViewer: React.FC<{ fileUrl: string }> = ({ fileUrl }) => {
                 const loadingTask = getDocument(fileUrl);
                 const pdf = await loadingTask.promise;
                 setPdfDocument(pdf);
+                setTotalPages(pdf.numPages);
             } catch (error) {
                 console.error('Error loading PDF document:', error);
             }
@@ -41,6 +47,10 @@ const PDFViewer: React.FC<{ fileUrl: string }> = ({ fileUrl }) => {
     useEffect(() => {
         const renderPage = async (pageNum: number) => {
             if (!pdfDocument || !canvasRef.current || !textLayerRef.current || !annotationLayerRef.current) return;
+
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
 
             const page = await pdfDocument.getPage(pageNum);
             const viewport = page.getViewport({ scale });
@@ -56,7 +66,8 @@ const PDFViewer: React.FC<{ fileUrl: string }> = ({ fileUrl }) => {
                     viewport,
                 };
 
-                await page.render(renderContext).promise;
+                renderTaskRef.current = page.render(renderContext);
+                await renderTaskRef.current.promise;
 
                 // Clear existing text-layer content
                 textLayerRef.current.innerHTML = '';
@@ -117,13 +128,61 @@ const PDFViewer: React.FC<{ fileUrl: string }> = ({ fileUrl }) => {
         });
     };
 
+
+    function goPrev() {
+        if (pdfDocument) {
+            setCurrentPage((prevPage) => {
+                renderPageRef.current(Math.max(prevPage - 1, 1));
+                return Math.max(prevPage - 1, 1);
+            });
+        }
+    }
+
+    function goNext() {
+        if (pdfDocument) {
+            setCurrentPage((prevPage) => {
+                renderPageRef.current(Math.min(prevPage + 1, totalPages));
+                return Math.min(prevPage + 1, totalPages);
+            });
+        }
+    }
+
+    function handlePageChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const newPage = parseInt(event.target.value, 10);
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+            renderPageRef.current(newPage);
+        }
+    }
+
     return (
-        <div style={{ position: 'relative' }}>
-            <canvas ref={canvasRef} style={{ display: 'block', pointerEvents: 'none' }}  />
-            <div ref={textLayerRef} className="textLayer" style={{ position: 'absolute', top: 0, left: 0 }} />
-            <div ref={annotationLayerRef} className="annotationLayer" style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }} />
-        </div>
-    );
+        <>
+            <div className="toolbar">
+                <button onClick={() => setScale((prevScale) => prevScale - 0.5)}>-</button>
+                <button onClick={() => setScale((prevScale) => prevScale + 0.5)}>+</button>
+                <div className="pages">
+                    <button
+                        onClick={goPrev}
+                    >
+                        Prev
+                    </button>
+                    <div><input type="text" value={currentPage} onChange={handlePageChange}/> of {totalPages} </div>
+                    <button
+                        onClick={goNext}
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+            <div style={{position: 'relative'}}>
+                <canvas ref={canvasRef} style={{display: 'block', pointerEvents: 'none'}}/>
+                <div ref={textLayerRef} className="textLayer" style={{position: 'absolute', top: 0, left: 0}}/>
+                <div ref={annotationLayerRef} className="annotationLayer"
+                     style={{position: 'absolute', top: 0, left: 0, pointerEvents: 'none'}}/>
+            </div>
+        </>
+    )
+        ;
 };
 
 export default PDFViewer;

@@ -6,7 +6,7 @@ function App() {
     return (
         <div>
             <h1>PDF.js in React</h1>
-            <PDFViewer fileUrl={'https://api.slingacademy.com/v1/sample-data/files/just-text.pdf'}/>
+            <PDFViewer fileUrl={'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf'}/>
         </div>
     )
 }

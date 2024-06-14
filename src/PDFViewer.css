@@ -1,0 +1,40 @@
+.toolbar {
+    background: rgba(2,4,21,0.94);
+    color: #eae7e7;
+    padding: 10px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    width: 50vw;
+    margin-left: 20%;
+    height: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.toolbar > button,
+.toolbar > div > button
+{
+    position: relative;
+    background: none;
+    cursor: pointer;
+    z-index: 99;
+}
+
+.toolbar > button:hover,
+.toolbar > div > button:hover {
+    outline: none;
+    border: none;
+}
+
+.pages {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.pages > div > input {
+    width: 30px;
+    margin-right: 5px;
+}
